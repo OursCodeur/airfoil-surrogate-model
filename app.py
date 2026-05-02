@@ -61,6 +61,20 @@ def cache_data_in_streamlit(
     return st.cache_data(**cache_options)
 
 
+def cache_resource_in_streamlit(
+    **cache_options: Any,
+) -> Callable[[CachedFunction], CachedFunction]:
+    """Use Streamlit resource caching only when running under Streamlit."""
+
+    def passthrough(function: CachedFunction) -> CachedFunction:
+        return function
+
+    if get_script_run_ctx(suppress_warning=True) is None:
+        return passthrough
+
+    return st.cache_resource(**cache_options)
+
+
 class SliderConfig(TypedDict):
     """Display settings for one numeric sidebar control."""
 
@@ -331,6 +345,37 @@ def fit_and_evaluate(
     return fitted_models, results
 
 
+def physical_holdout_split(
+    df: pd.DataFrame,
+    holdout_feature: str,
+    holdout_quantile: float,
+) -> tuple[pd.DataFrame, pd.DataFrame, float]:
+    """Split out the highest feature values by row rank.
+
+    A strict value threshold can produce an empty test set when many rows share
+    the same maximum value. Ranking rows keeps the slider behavior stable while
+    still creating a deliberately harder high-region holdout.
+    """
+
+    row_count = len(df)
+    if row_count < 2:
+        raise ValueError("Physical holdout requires at least two rows.")
+
+    requested_test_size = int(np.ceil(row_count * (1.0 - holdout_quantile)))
+    test_size = min(max(1, requested_test_size), row_count - 1)
+
+    sorted_rows = df.sort_values(
+        holdout_feature,
+        ascending=False,
+        kind="mergesort",
+    )
+    holdout_test = sorted_rows.head(test_size).sort_index()
+    holdout_train = df.drop(index=holdout_test.index)
+    threshold = float(holdout_test[holdout_feature].min())
+
+    return holdout_train, holdout_test, threshold
+
+
 def run_experiment(
     df: pd.DataFrame,
     random_state: int,
@@ -365,12 +410,14 @@ def run_experiment(
         random_state,
     )
 
-    # The holdout threshold is computed on the full dataset. We train below the
-    # threshold and test above it. This creates an intentionally harsher test
-    # than a random split.
-    threshold = float(df[holdout_feature].quantile(holdout_quantile))
-    holdout_train = df[df[holdout_feature] <= threshold]
-    holdout_test = df[df[holdout_feature] > threshold]
+    # The holdout is rank-based rather than threshold-based. This avoids empty
+    # splits for features with repeated maximum values while preserving the
+    # intent: hold out the highest physical region for testing.
+    holdout_train, holdout_test, threshold = physical_holdout_split(
+        df=df,
+        holdout_feature=holdout_feature,
+        holdout_quantile=holdout_quantile,
+    )
 
     holdout_models, holdout_results = fit_and_evaluate(
         holdout_train[FEATURE_COLUMNS],
@@ -394,7 +441,7 @@ def run_experiment(
     }
 
 
-@cache_data_in_streamlit(show_spinner="Training models...")
+@cache_resource_in_streamlit(show_spinner="Training models...")
 def build_experiment(
     df: pd.DataFrame,
     random_state: int,
@@ -898,7 +945,7 @@ def main() -> None:
         format_func=lambda column: FEATURE_LABELS[column],
     )
     holdout_quantile = st.sidebar.slider(
-        "Train below this quantile, test above it",
+        "Hold out rows above this quantile",
         min_value=0.60,
         max_value=0.90,
         value=0.80,
@@ -1002,13 +1049,14 @@ def main() -> None:
         )
 
         threshold = experiment["holdout_threshold"]
+        heldout_percent = 100.0 * (1.0 - float(holdout_quantile))
         st.markdown(
             f"""
 **Current holdout**
 
 - Feature: `{FEATURE_LABELS[holdout_feature]}`
-- Training set: values <= `{threshold:.5g}`
-- Test set: values > `{threshold:.5g}`
+- Test region: highest `{heldout_percent:.0f}%` of rows by feature value
+- Lowest test-set value: `{threshold:.5g}`
 - Training rows: `{experiment["holdout_train_size"]:,}`
 - Test rows: `{experiment["holdout_test_size"]:,}`
             """

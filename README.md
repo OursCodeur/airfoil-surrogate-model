@@ -68,7 +68,7 @@ py -m venv .venv
 
 - `1. Data`: dataset source, feature ranges, and raw sample rows.
 - `2. Models`: baseline model comparison and error analysis.
-- `3. Extrapolation`: random split versus physical holdout.
+- `3. Extrapolation`: random split versus high-region physical holdout.
 - `4. Trust signal`: single prediction with confidence and validity signals.
 - `5. Terminology`: vocabulary lookup with external resources.
 - `6. Notes`: technical takeaways from the workflow.
