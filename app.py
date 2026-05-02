@@ -75,6 +75,51 @@ def cache_resource_in_streamlit(
     return st.cache_resource(**cache_options)
 
 
+def apply_layout_styles() -> None:
+    """Apply compact Streamlit styling shared with the CFD follow-up app."""
+
+    st.markdown(
+        """
+<style>
+  .block-container {
+    max-width: 1280px;
+    padding-top: 1.35rem;
+    padding-bottom: 2.0rem;
+  }
+  h1 {
+    font-size: 2.25rem !important;
+    line-height: 1.12 !important;
+    margin-bottom: 0.25rem !important;
+  }
+  h2, h3 {
+    margin-top: 0.75rem !important;
+    margin-bottom: 0.35rem !important;
+  }
+  div[data-testid="stMetric"] {
+    min-height: 3.55rem;
+  }
+  div[data-testid="stMetricLabel"] p {
+    font-size: 0.82rem;
+  }
+  div[data-testid="stMetricValue"] {
+    font-size: 1.55rem;
+  }
+  div[data-testid="stSegmentedControl"] {
+    margin-top: 1.25rem;
+    margin-bottom: 1.0rem;
+  }
+  div[data-testid="stAlert"] {
+    padding: 0.65rem 0.85rem;
+  }
+  div[data-testid="stCaptionContainer"] {
+    margin-top: 0.15rem;
+  }
+</style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 class SliderConfig(TypedDict):
     """Display settings for one numeric sidebar control."""
 
@@ -914,6 +959,7 @@ def main() -> None:
         page_icon=None,
         layout="wide",
     )
+    apply_layout_styles()
 
     st.title("Airfoil Surrogate Model")
     st.caption(
@@ -964,18 +1010,25 @@ def main() -> None:
         default_values=central_training_point(experiment["random_train"]),
     )
 
-    tabs = st.tabs(
-        [
-            "1. Data",
-            "2. Models",
-            "3. Extrapolation",
-            "4. Trust signal",
-            "5. Terminology",
-            "6. Notes",
-        ]
+    view_labels = [
+        "1. Data",
+        "2. Models",
+        "3. Extrapolation",
+        "4. Trust signal",
+        "5. Terminology",
+        "6. Notes",
+    ]
+    selected_view = st.segmented_control(
+        "View",
+        view_labels,
+        default=view_labels[0],
+        label_visibility="collapsed",
+        width="stretch",
     )
+    if selected_view is None:
+        selected_view = view_labels[0]
 
-    with tabs[0]:
+    if selected_view == view_labels[0]:
         st.subheader("Dataset")
         st.write(
             "The dataset contains airfoil self-noise measurements from NASA "
@@ -994,7 +1047,7 @@ def main() -> None:
         st.markdown("**Raw sample**")
         st.dataframe(df.head(20), width="stretch")
 
-    with tabs[1]:
+    elif selected_view == view_labels[1]:
         st.subheader("Baseline surrogate models")
         st.write(
             "This first experiment uses a random train/test split. It is a "
@@ -1041,7 +1094,7 @@ def main() -> None:
         )
         st.dataframe(worst, width="stretch")
 
-    with tabs[2]:
+    elif selected_view == view_labels[2]:
         st.subheader("Random split vs physical holdout")
         st.write(
             "A model can look good when train and test data are randomly mixed, "
@@ -1098,13 +1151,13 @@ way new designs will actually be explored.
             """
         )
 
-    with tabs[3]:
+    elif selected_view == view_labels[3]:
         render_trust_panel(user_input, experiment)
 
-    with tabs[4]:
+    elif selected_view == view_labels[4]:
         render_terminology()
 
-    with tabs[5]:
+    elif selected_view == view_labels[5]:
         render_project_notes()
 
 
