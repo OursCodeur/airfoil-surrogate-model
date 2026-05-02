@@ -1,0 +1,22 @@
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+extend-exclude = [
+  ".matplotlib-cache",
+  ".venv",
+  "data",
+]
+
+[tool.ruff.lint]
+select = [
+  "B",
+  "E",
+  "F",
+  "I",
+  "SIM",
+  "UP",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Matplotlib needs its config directory set before importing matplotlib itself.
+"app.py" = ["E402"]

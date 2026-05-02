@@ -1,0 +1,10 @@
+.venv/
+.matplotlib-cache/
+__pycache__/
+.streamlit/
+.ruff_cache/
+.idea/
+.agents/
+.codex/
+*.pyc
+.DS_Store
