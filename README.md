@@ -1,7 +1,11 @@
 # Airfoil Surrogate Model
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://airfoil-surrogate-model.streamlit.app/)
+
 End-to-end Streamlit app for exploring a surrogate-model workflow on the NASA /
 UCI Airfoil Self-Noise dataset.
+
+Live app: https://airfoil-surrogate-model.streamlit.app/
 
 The app trains regression models to predict sound pressure level in dB from five
 airfoil and wind-tunnel parameters, then compares standard validation against a
