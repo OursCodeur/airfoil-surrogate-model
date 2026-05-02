@@ -369,8 +369,8 @@ def physical_holdout_split(
         ascending=False,
         kind="mergesort",
     )
-    holdout_test = sorted_rows.head(test_size).sort_index()
-    holdout_train = df.drop(index=holdout_test.index)
+    holdout_test = pd.DataFrame(sorted_rows.head(test_size))
+    holdout_train = pd.DataFrame(df.drop(index=holdout_test.index))
     threshold = float(holdout_test[holdout_feature].min())
 
     return holdout_train, holdout_test, threshold
